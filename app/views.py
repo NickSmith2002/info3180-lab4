@@ -41,19 +41,30 @@ def upload():
 def login():
     form = LoginForm()
 
+    if form.validate_on_submit():
+        username = form.username.data
+        password = form.password.data
+
     # change this to actually validate the entire form submission
     # and not just one field
     if form.username.data:
         # Get the username and password values from the form.
+        res = request.form
+        formUsername = res['username']
+        formPassword = res['password']
 
         # Using your model, query database for a user based on the username
         # and password submitted. Remember you need to compare the password hash.
         # You will need to import the appropriate function to do so.
         # Then store the result of that query to a `user` variable so it can be
         # passed to the login_user() method below.
-
+        user = UserProfile.query.filter_by(username = formUsername)
         # Gets user id, load into session
-        login_user(user)
+        if check_password_hash(user[0].passowrd,formPassword):
+            login_user(user[0])
+
+            flash("You have successfully logged in")
+            return redirect(url_for("upload"))
 
         # Remember to flash a message to the user
         return redirect(url_for("home"))  # The user should be redirected to the upload form instead
