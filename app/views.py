@@ -5,6 +5,8 @@ from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.utils import secure_filename
 from app.models import UserProfile
 from app.forms import LoginForm, UploadForm
+from werkzeug.security import check_password_hash, generate_password_hash
+from .forms import UploadForm
 
 
 ###
@@ -40,7 +42,7 @@ def upload():
             filename = secure_filename(image_file.filename)
             image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             image_file.save(image_path)
-            
+
             flash('File Saved', 'success')
             return redirect(url_for('home')) # Update this to redirect the user to a route that displays all uploaded image files
 
@@ -57,27 +59,25 @@ def login():
 
     # change this to actually validate the entire form submission
     # and not just one field
-    if form.username.data:
+    #if form.username.data:
         # Get the username and password values from the form.
-        res = request.form
-        formUsername = res['username']
-        formPassword = res['password']
 
         # Using your model, query database for a user based on the username
         # and password submitted. Remember you need to compare the password hash.
         # You will need to import the appropriate function to do so.
         # Then store the result of that query to a `user` variable so it can be
         # passed to the login_user() method below.
-        user = UserProfile.query.filter_by(username = formUsername)
+        user = UserProfile.query.filter_by(username = username).first()
         # Gets user id, load into session
-        if check_password_hash(user[0].passowrd,formPassword):
-            login_user(user[0])
-
+        if user and check_password_hash(user.password,password):
+            login_user(user)
             flash("You have successfully logged in")
             return redirect(url_for("upload"))
 
         # Remember to flash a message to the user
-        return redirect(url_for("home"))  # The user should be redirected to the upload form instead
+        flash("Invalid username or password")
+        return redirect(url_for("home"))  # The user should be redirected to the home page instead
+    
     return render_template("login.html", form=form)
 
 # user_loader callback. This callback is used to reload the user object from
@@ -121,3 +121,26 @@ def add_header(response):
 def page_not_found(error):
     """Custom 404 page."""
     return render_template('404.html'), 404
+
+#Exercise 6: Listing your uploaded files
+def get_uploaded_images():
+    uploadDir = app.config['UPLOAD_FOLDER']
+    lst = []
+    for root, dirs, files in os.walk(uploadDir):
+        for file in files:
+            if file.endswith(('.jpg', 'jpeg', 'png')):
+                lst.append(os.path.join(root,file))
+    return lst
+
+@app.route('/uploads/<filename>')
+def get_image(filename):
+    uploads_dir = app.config['UPLOAD_FOLDER']
+    return send_from_directory(os.path.join(os.getcwd(),uploads_dir), filename)
+
+@app.route('/files')
+@login_required
+def files():
+    uploads_dir = app.config['UPLOAD_FOLDER']
+    images = get_uploaded_images()
+    print (images)
+    return render_template('files.html', images=images)
