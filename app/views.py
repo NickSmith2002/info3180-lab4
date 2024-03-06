@@ -144,3 +144,11 @@ def files():
     images = get_uploaded_images()
     print (images)
     return render_template('files.html', images=images)
+
+#Exercise 7 - Create a logout route 
+@app.route('/logout')
+def logout():
+    logout_user()
+    flash("You have been logged out")
+    return redirect(url_for('home'))
+    
